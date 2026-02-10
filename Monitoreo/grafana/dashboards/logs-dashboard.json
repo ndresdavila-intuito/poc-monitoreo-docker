@@ -1,0 +1,177 @@
+{
+    "id": null,
+    "title": "Observabilidad – Logs",
+    "uid": "observabilidad-dashboard",
+    "schemaVersion": 36,
+    "version": 17,
+    "refresh": "10s",
+    "timezone": "",
+    "templating": {
+        "list": [
+            {
+                "name": "serviceName",
+                "label": "Service Name",
+                "type": "query",
+                "datasource": {
+                    "type": "vertamedia-clickhouse-datasource",
+                    "uid": "ClickHouse"
+                },
+                "refresh": 1,
+                "query": "SELECT DISTINCT ServiceName AS service FROM otel_logs ORDER BY service ASC",
+                "multi": true,
+                "includeAll": true,
+                "allValue": null,
+                "current": {
+                    "selected": true,
+                    "text": [
+                        "All"
+                    ],
+                    "value": [
+                        "$__all"
+                    ]
+                }
+            },
+            {
+                "name": "severity",
+                "label": "Severity",
+                "type": "custom",
+                "query": "Information : INFO, Error : ERROR, Warning : WARN, Debug : DEBUG",
+                "multi": true,
+                "includeAll": true,
+                "allValue": null,
+                "current": {
+                    "selected": true,
+                    "text": [
+                        "All"
+                    ],
+                    "value": [
+                        "$__all"
+                    ]
+                }
+            }
+        ]
+    },
+    "panels": [
+        {
+            "type": "grafana-polystat-panel",
+            "title": "Ping Status",
+            "gridPos": {
+                "x": 0,
+                "y": 0,
+                "w": 24,
+                "h": 8
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "VictoriaMetrics"
+            },
+            "targets": [
+                {
+                    "expr": "demo_ping_latency",
+                    "legendFormat": "{{service_name}}",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "autoSizeColumns": true,
+                "autoSizeRows": true,
+                "columnAutoSize": true,
+                "displayLimit": 100,
+                "globalUnit": "ms",
+                "polygonGlobalFillColorIsHex": true,
+                "polygonGlobalFillColor": "#299c46",
+                "polygonBorderSize": 2,
+                "polygonBorderColor": "#000000",
+                "radius": 50,
+                "rowAutoSize": true,
+                "shape": "hexagon_pointed_top",
+                "tooltipDisplayMode": "all"
+            },
+            "fieldConfig": {
+                "defaults": {
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "#EAB839",
+                                "value": 50
+                            },
+                            {
+                                "color": "red",
+                                "value": 200
+                            }
+                        ]
+                    },
+                    "mappings": [],
+                    "unit": "ms"
+                },
+                "overrides": []
+            }
+        },
+        {
+            "type": "table",
+            "title": "Logs del Servicio Seleccionado",
+            "gridPos": {
+                "x": 0,
+                "y": 8,
+                "w": 24,
+                "h": 20
+            },
+            "datasource": {
+                "type": "vertamedia-clickhouse-datasource",
+                "uid": "ClickHouse"
+            },
+            "targets": [
+                {
+                    "format": "table",
+                    "query": "SELECT Timestamp, SeverityText, ServiceName, Body, LogAttributes FROM otel_logs WHERE (length('${serviceName:pipe}') = 0 OR has(splitByChar('|', '${serviceName:pipe}'), ServiceName)) AND (length('${severity:pipe}') = 0 OR has(splitByChar('|', '${severity:pipe}'), SeverityText)) AND Timestamp >= toDateTime64($__from / 1000, 9) AND Timestamp <= toDateTime64($__to / 1000, 9) ORDER BY Timestamp DESC LIMIT 500"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "custom": {
+                        "align": "auto",
+                        "displayMode": "auto",
+                        "inspect": false
+                    }
+                },
+                "overrides": [
+                    {
+                        "matcher": {
+                            "id": "byName",
+                            "options": "SeverityText"
+                        },
+                        "properties": [
+                            {
+                                "id": "mappings",
+                                "value": [
+                                    {
+                                        "type": "value",
+                                        "options": {
+                                            "ERROR": {
+                                                "color": "red",
+                                                "index": 0
+                                            },
+                                            "WARN": {
+                                                "color": "yellow",
+                                                "index": 1
+                                            },
+                                            "INFO": {
+                                                "color": "green",
+                                                "index": 2
+                                            }
+                                        }
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}
