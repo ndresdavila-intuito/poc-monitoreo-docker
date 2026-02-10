@@ -1,17 +1,17 @@
 # Guía de Pruebas con Postman (OpenTelemetry)
 
-Esta guía te permite enviar señales de telemetría (Traces, Metrics, Logs) manualmente a tu OpenTelemetry Collector usando Postman.
+Esta guía permite enviar señales de telemetría (Traces, Metrics, Logs) manualmente al OpenTelemetry Collector usando Postman.
 
 > [!NOTE]
 > **¿Quién genera estos JSONs normalmente?**
-> En una aplicación real, **tú NO escribes estos JSONs manualmente**.
-> Son generados automáticamente por el **SDK de OpenTelemetry** (la librería que instalas en tu código, como `opentelemetry-sdk` en Python).
+> En una aplicación real, **no se escriben estos JSONs manualmente**.
+> Son generados automáticamente por el **SDK de OpenTelemetry** (la librería que se instala en el código, como `opentelemetry-sdk` en Python).
 > 
-> El SDK toma tus llamadas de alto nivel (como `tracer.start_span("mi_operacion")`) y las transforma en estos paquetes JSON (para HTTP) o Protobuf binario (para gRPC) antes de enviarlos al Collector.
+> El SDK toma las llamadas de alto nivel (como `tracer.start_span("mi_operacion")`) y las transforma en estos paquetes JSON (para HTTP) o Protobuf binario (para gRPC) antes de enviarlos al Collector.
 > Esta guía usa los formatos "crudos" solo para fines de prueba y depuración.
 
 ## Pre-requisitos
-1. **OpenTelemetry Collector** corriendo.
+1. **OpenTelemetry Collector** en ejecución.
    - Puerto HTTP habilitado: `4318`
    - Puerto gRPC habilitado: `4317`
 2. **Postman** instalado.
@@ -136,23 +136,26 @@ Esta guía te permite enviar señales de telemetría (Traces, Metrics, Logs) man
 ---
 
 ## 2. Protocolo gRPC
-Postman soporta gRPC nativamente. Debes crear un nuevo request y seleccionar "gRPC" en lugar de "HTTP".
+Postman soporta gRPC nativamente. Se debe crear un nuevo request y seleccionar "gRPC" en lugar de "HTTP".
 
 **URL:** `localhost:4317` (sin http://)
 
 ### Configuración en Postman
+> [!TIP]
+> **Se han descargado los archivos .proto necesarios.**
+> Se encuentran en la carpeta `Ejemplo Python/postman_protos`.
 
-1.  **Nuevo Request:** Selecciona "gRPC Request".
+1.  **Nuevo Request:** Seleccione "gRPC Request".
 2.  **Server URL:** `localhost:4317`
 3.  **Service Definition (Protobuf):**
-    *   Selecciona **"Import a .proto file"**.
-    *   Navega a la carpeta `Ejemplo Python/postman_protos/opentelemetry/proto/collector/logs/v1/`.
-    *   Selecciona el archivo **`logs_service.proto`**.
-    *   **Importante:** Si Postman te pide "Import Paths" o dice que faltan dependencias, agrega la carpeta raíz `Ejemplo Python/postman_protos` como un valid import path.
-4.  **Método:** Una vez cargado, selecciona:
+    *   Seleccione **"Import a .proto file"**.
+    *   Navegue a la carpeta `Ejemplo Python/postman_protos/opentelemetry/proto/collector/logs/v1/`.
+    *   Seleccione el archivo **`logs_service.proto`**.
+    *   **Importante:** Si Postman solicita "Import Paths" o indica que faltan dependencias, agregue la carpeta raíz `Ejemplo Python/postman_protos` como un `valid import path`.
+4.  **Método:** Una vez cargado, seleccione:
     *   `opentelemetry.proto.collector.logs.v1.LogsService/Export`
 
-**(Repite los pasos para Traces y Metrics usando `trace_service.proto` y `metrics_service.proto` respectivamente).**
+**(Repita los pasos para Traces y Metrics usando `trace_service.proto` y `metrics_service.proto` respectivamente).**
 
 ### Ejemplos de Payload (JSON)
 
@@ -269,3 +272,4 @@ Postman soporta gRPC nativamente. Debes crear un nuevo request y seleccionar "gR
   ]
 }
 ```
+*Nota: En gRPC, los nombres de campos usan snake_case (`resource_logs`, `time_unix_nano`) en lugar de camelCase (`resourceLogs`), y los valores primitivos a veces requieren envoltorios como `string_value` o `int_value` dependiendo de la definición exacta del proto.*
