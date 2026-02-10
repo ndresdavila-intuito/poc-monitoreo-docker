@@ -2,6 +2,14 @@
 
 Esta guía te permite enviar señales de telemetría (Traces, Metrics, Logs) manualmente a tu OpenTelemetry Collector usando Postman.
 
+> [!NOTE]
+> **¿Quién genera estos JSONs normalmente?**
+> En una aplicación real, **tú NO escribes estos JSONs manualmente**.
+> Son generados automáticamente por el **SDK de OpenTelemetry** (la librería que instalas en tu código, como `opentelemetry-sdk` en Python).
+> 
+> El SDK toma tus llamadas de alto nivel (como `tracer.start_span("mi_operacion")`) y las transforma en estos paquetes JSON (para HTTP) o Protobuf binario (para gRPC) antes de enviarlos al Collector.
+> Esta guía usa los formatos "crudos" solo para fines de prueba y depuración.
+
 ## Pre-requisitos
 1. **OpenTelemetry Collector** corriendo.
    - Puerto HTTP habilitado: `4318`
