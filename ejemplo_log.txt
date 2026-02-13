@@ -1,0 +1,57 @@
+{
+  "resourceLogs": [
+    {
+      "resource": {
+        "attributes": [
+          { "key": "service.name", "value": { "stringValue": "tienda-virtual-postman" } }   // Nombre del programa
+        ]
+      },
+      "scopeLogs": [
+        {
+          "scope": { "name": "manual-test-ecommerce" },         // Nombre del archivo de la traza
+          "logRecords": [
+            {
+              "timeUnixNano": "1770992100000000000",            // Timestamp
+              "severityText": "INFO",                           // Tipo de severidad
+              "severityNumber": 9,                              // Numero de severidad: mayor más crítico (1-4 detalles técnicos, 5-8 debug, 9-12 info, 13-16 warning, 17-20 error, 21-24 fatal)
+              "traceId": "5b8aa5a2d2c872e8321cf37308d69df2",    // ID de toda la operación
+              "spanId": "051581bf3cb55c13",                     // ID del proceso actual de la operación
+              "body": {                                         // Body del mensaje
+                "kvlistValue": {                                // Indica que body es un JSON
+                  "values": [                                   // Cada valor es un par de llave-valor
+                    { "key": "nombre", "value": { "stringValue": "Juan Perez" } },
+                    { "key": "email", "value": { "stringValue": "juan.perez@example.com" } },
+                    { "key": "telefono", "value": { "stringValue": "+5512345678" } },
+                    { 
+                      "key": "direccion", 
+                      "value": {
+                        "kvlistValue": {                        // valor puede ser un JSON anidado
+                          "values": [
+                            { "key": "calle", "value": { "stringValue": "Av. Reforma 123" } },
+                            { "key": "ciudad", "value": { "stringValue": "CDMX" } },
+                            { "key": "cp", "value": { "stringValue": "06500" } }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                }
+              },
+              // Atributos para filtrar logs en queries
+              "attributes": [
+                { "key": "enduser.id", "value": { "stringValue": "a1b2c3d4-e5f6-7890-1234-567890abcdef" } },
+                { "key": "ecommerce.total", "value": { "doubleValue": 450.50 } },
+                { 
+                    "key": "usuario.json", 
+                    "value": { 
+                        "stringValue": "{\"id\": \"...\", \"contexto\": {\"ip\": \"192.168.1.1\", \"device\": \"Mobile\"}, \"carrito\": [{\"producto_nombre\": \"Laptop\", \"precio\": 1200}]}" 
+                    } 
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -4,6 +4,9 @@ from opentelemetry.metrics import CallbackOptions, Observation
 request_counter = None
 processing_duration = None
 active_users_gauge = None
+transacciones_usuario_counter = None
+ecommerce_cart_value = None
+ecommerce_items_sold = None
 # Variable global para almacenar el valor actual del ping
 current_ping_value = 0
 
@@ -14,7 +17,13 @@ def ping_callback(options: CallbackOptions):
 
 
 def init_metrics():
-    global request_counter, processing_duration, active_users_gauge
+    global \
+        request_counter, \
+        processing_duration, \
+        active_users_gauge, \
+        transacciones_usuario_counter, \
+        ecommerce_cart_value, \
+        ecommerce_items_sold
 
     meter = obs.meter
 
@@ -39,7 +48,33 @@ def init_metrics():
 
     # UpDownCounter (Gauge simulado): Usuarios activos
     active_users_gauge = meter.create_up_down_counter(
-        "demo.active_users", unit="1", description="Número simulado de usuarios activos"
+        "ecommerce.usuarios.activos",
+        unit="1",
+        description="Usuarios concurrentes en el sitio",
+    )
+
+    # Counter: Número de transacciones de usuarios (Checkouts)
+    global transacciones_usuario_counter
+    transacciones_usuario_counter = meter.create_counter(
+        "ecommerce.abonos.total",
+        unit="1",
+        description="Total de ventas realizadas",
+    )
+
+    # Histogram: Valor del carrito de compras
+    global ecommerce_cart_value
+    ecommerce_cart_value = meter.create_histogram(
+        "ecommerce.cart.value",
+        unit="USD",
+        description="Valor monetario de los carritos procesados",
+    )
+
+    # Counter: Ítems vendidos
+    global ecommerce_items_sold
+    ecommerce_items_sold = meter.create_counter(
+        "ecommerce.items.count",
+        unit="1",
+        description="Total de ítems individuales vendidos",
     )
 
     # ObservableGauge: Ideal para valores que "son" (como temperatura o ping actual)

@@ -45,7 +45,6 @@ from opentelemetry.exporter.otlp.proto.http._log_exporter import (
 load_dotenv()
 
 SERVICE_NAME = os.getenv("SERVICE_NAME", "unknown-service")
-# Default endpoint: if protocol is grpc, use localhost:4317; if http, use http://localhost:4318
 OTEL_COLLECTOR_ENDPOINT = os.getenv("OTEL_COLLECTOR_ENDPOINT", "localhost:4317")
 OTEL_BEARER_TOKEN = os.getenv("OTEL_BEARER_TOKEN", "")
 APP_ENV = os.getenv("APP_ENV", "development").lower()

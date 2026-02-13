@@ -1,0 +1,35 @@
+{
+  "resourceSpans": [
+    {
+      "resource": {
+        "attributes": [
+          { "key": "service.name", "value": { "stringValue": "tienda-virtual-postman" } }   // Nombre del programa
+        ]
+      },
+      "scopeSpans": [
+        {
+          "scope": { "name": "manual-test-ecommerce" },         // Nombre del archivo de donde viene la traza
+          "spans": [
+            {
+              "traceId": "5b8aa5a2d2c872e8321cf37308d69df2",    // ID de toda la operación
+              "spanId": "051581bf3cb55c13",                     // ID del proceso actual de la operación
+              "parentSpanId": "",                               // Vacío: span raíz; No vacío: span hijo de otro span
+              "name": "procesar_transaccion",                   // Nombre del proceso actual
+              "kind": 1,                                        // Tipo de llamada, 1: función interna, 2: servidor recibiendo petición, 3: cliente haciendo petición
+              "startTimeUnixNano": "1770992100000000000",       // Inicio
+              "endTimeUnixNano":   "1770992101500000000",       // Fin
+              "status": {                                       // 0: unset/finalizado, 1: ok, 2: error
+                "code": 1 // (OK)
+              },
+              "attributes": [                                   // Datos para filtrar traces
+                { "key": "http.method", "value": { "stringValue": "POST" } },
+                { "key": "enduser.id", "value": { "stringValue": "a1b2c3d4s" } },
+                { "key": "ecommerce.cart.total", "value": { "doubleValue": 450.50 } }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

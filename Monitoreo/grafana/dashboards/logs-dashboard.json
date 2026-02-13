@@ -53,13 +53,24 @@
     },
     "panels": [
         {
-            "type": "grafana-polystat-panel",
-            "title": "Ping Status",
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+            },
+            "id": 99,
+            "title": "Métricas de Negocio (E-Commerce)",
+            "type": "row"
+        },
+        {
+            "type": "stat",
+            "title": "Ventas Totales",
             "gridPos": {
                 "x": 0,
-                "y": 0,
-                "w": 24,
-                "h": 8
+                "y": 1,
+                "w": 6,
+                "h": 4
             },
             "datasource": {
                 "type": "prometheus",
@@ -67,7 +78,170 @@
             },
             "targets": [
                 {
-                    "expr": "demo_ping_latency",
+                    "expr": "sum(ecommerce_abonos_total_total)",
+                    "legendFormat": "Ventas",
+                    "refId": "A"
+                }
+            ],
+            "options": {
+                "reduceOptions": {
+                    "values": false,
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": ""
+                },
+                "orientation": "auto",
+                "textMode": "auto",
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto"
+            }
+        },
+        {
+            "type": "stat",
+            "title": "Ítems Vendidos",
+            "gridPos": {
+                "x": 6,
+                "y": 1,
+                "w": 6,
+                "h": 4
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "VictoriaMetrics"
+            },
+            "targets": [
+                {
+                    "expr": "sum(ecommerce_items_count_total)",
+                    "legendFormat": "Ítems",
+                    "refId": "A"
+                }
+            ]
+        },
+        {
+            "type": "stat",
+            "title": "Valor Promedio Carrito",
+            "gridPos": {
+                "x": 12,
+                "y": 1,
+                "w": 6,
+                "h": 4
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "VictoriaMetrics"
+            },
+            "targets": [
+                {
+                    "expr": "sum(ecommerce_cart_value_sum) / sum(ecommerce_cart_value_count)",
+                    "legendFormat": "Promedio USD",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "unit": "currencyUSD",
+                    "decimals": 2
+                }
+            }
+        },
+        {
+            "type": "gauge",
+            "title": "Usuarios Activos",
+            "gridPos": {
+                "x": 18,
+                "y": 1,
+                "w": 6,
+                "h": 4
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "VictoriaMetrics"
+            },
+            "targets": [
+                {
+                    "expr": "ecommerce_usuarios_activos",
+                    "legendFormat": "Usuarios",
+                    "refId": "A"
+                }
+            ],
+            "fieldConfig": {
+                "defaults": {
+                    "min": 0,
+                    "max": 100,
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 50
+                            },
+                            {
+                                "color": "red",
+                                "value": 80
+                            }
+                        ]
+                    }
+                }
+            }
+        },
+        {
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 5
+            },
+            "id": 100,
+            "title": "Trazabilidad (Tempo) & Logs",
+            "type": "row"
+        },
+        {
+            "type": "table",
+            "title": "Traces Recientes (Tempo)",
+            "gridPos": {
+                "x": 0,
+                "y": 6,
+                "w": 12,
+                "h": 10
+            },
+            "datasource": {
+                "type": "tempo",
+                "uid": "Tempo"
+            },
+            "targets": [
+                {
+                    "refId": "A",
+                    "datasource": {
+                        "type": "tempo",
+                        "uid": "Tempo"
+                    },
+                    "queryType": "traceql",
+                    "query": "{ .service.name = \"$serviceName\" }"
+                }
+            ]
+        },
+        {
+            "type": "grafana-polystat-panel",
+            "title": "Ping Status",
+            "gridPos": {
+                "x": 12,
+                "y": 6,
+                "w": 12,
+                "h": 10
+            },
+            "datasource": {
+                "type": "prometheus",
+                "uid": "VictoriaMetrics"
+            },
+            "targets": [
+                {
+                    "expr": "demo_ping_latency_milliseconds",
                     "legendFormat": "{{service_name}}",
                     "refId": "A"
                 }
@@ -114,10 +288,10 @@
         },
         {
             "type": "table",
-            "title": "Logs del Servicio Seleccionado",
+            "title": "Logs del Servicio Seleccionado (ClickHouse)",
             "gridPos": {
                 "x": 0,
-                "y": 8,
+                "y": 16,
                 "w": 24,
                 "h": 20
             },

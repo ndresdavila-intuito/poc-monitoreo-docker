@@ -3,3 +3,5 @@ opentelemetry-sdk
 opentelemetry-exporter-otlp
 grpcio
 python-dotenv
+fastapi
+uvicorn

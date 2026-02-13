@@ -1,0 +1,59 @@
+{
+  "resourceMetrics": [
+    {
+      "resource": {
+        "attributes": [
+          { "key": "service.name", "value": { "stringValue": "tienda-virtual-postman" } }   // Nombre del programa
+        ]
+      },
+      "scopeMetrics": [
+        {
+          "scope": { "name": "manual-test-ecommerce" }, // Nombre del módulo/librería/archivo
+          "metrics": [
+            // --- MÉTRICA 1: HISTOGRAMA (Distribución de Valores) ---
+            {
+              "name": "ecommerce.cart.value",                               // ID único de la métrica
+              "description": "Valor monetario de los carritos procesados",  // Descripción textual
+              "unit": "USD",                                                // Unidad de la métrica
+              "histogram": {
+                "aggregationTemporality": 2,                                // 2: acumulativo (acumula valor desde el inicio)
+                "dataPoints": [
+                  {
+                    "count": 1,                             // Cuántas veces ocurrió (1 carrito)
+                    "sum": 250.0,                           // Suma total de valores hasta ahora
+                    "bucketCounts": [0, 0, 1, 0],           // En qué rango cayó (el 1 está en la 3ra posición)
+                    "explicitBounds": [0, 100, 500, 1000],  // Los rangos: <100, <500, <1000, >1000
+                    "timeUnixNano": "1770993600000000000",  // Timestamp
+                    "attributes": [
+                      { "key": "device.type", "value": { "stringValue": "Desktop" } } // Etiqueta para filtrar (WHERE device='Desktop')
+                    ]
+                  }
+                ]
+              }
+            },
+            // --- MÉTRICA 2: SUM (Contador Simple) ---
+            {
+              "name": "ecommerce.abonos.total",             // ID único
+              "description": "Total de ventas realizadas",  // Descripción
+              "unit": "1",                                  // Unidad (1 = conteo simple)
+              "sum": {
+                "aggregationTemporality": 2,                // 2: acumulativo
+                "isMonotonic": true,                        // true: valor solo puede subir (i.e. kilometraje), false: valor puede bajar (i.e. temperatura)
+                "dataPoints": [
+                  {
+                    "asInt": 1,                             // Valor a sumar (+1 venta)
+                    "timeUnixNano": "1770993600000000000",  // Timestamp
+                    "attributes": [
+                        { "key": "payment.method", "value": { "stringValue": "paypal" } }, // Etiqueta para filtrar
+                        { "key": "device.type", "value": { "stringValue": "Mobile" } }
+                    ]
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
