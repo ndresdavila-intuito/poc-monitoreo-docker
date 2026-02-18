@@ -1,68 +1,90 @@
-import time
 import uvicorn
-from fastapi import FastAPI
-from pydantic import BaseModel
 import pprint
-
-# Importamos nuestra configuración de observabilidad
+import observability.metrics as metrics
+from fastapi import FastAPI
+from opentelemetry import trace
+from pydantic import BaseModel
+from observability.decorator import instrument
 from observability.observability import (
     logger,
     logger_provider,
     trace_provider,
     meter_provider,
 )
-import observability.metrics as metrics
-from observability.decorator import instrument
+
+# Suprimir warnings de Pydantic y OTel para mantener la consola limpia
+import warnings
+
+warnings.filterwarnings("ignore")
 
 
-# --- CLASE INTERCEPTORA RAW ---
+# --- CLASE INTERCEPTORA ---
 class InterceptorExporter:
+    """
+    Clase que intercepta los exportadores OTLP (OpenTelemetry Protocol) y les agrega el interceptor (InterceptorExporter)
+    Input:
+    - inner_exporter: Exportador original
+    - signal_type: Tipo de señal (logs, traces, metrics)
+    """
+
     def __init__(self, inner_exporter, signal_type):
         self.inner_exporter = inner_exporter
         self.signal_type = signal_type
+
+    """
+    Función que muestra el contenido de un objeto en un formato legible
+    Input:
+    - obj: Objeto a mostrar
+    - label: Etiqueta del objeto
+    - indent: Indentación
+    """
+
+    def _extract_raw(self, item):
+        """Introspección profunda para extraer atributos de objetos complejos."""
+        # Tipos básicos
+        if isinstance(item, (str, int, float, bool, type(None))):
+            return item
+        if isinstance(item, (list, tuple)):
+            return [self._extract_raw(x) for x in item]
+        if isinstance(item, dict):
+            return {k: self._extract_raw(v) for k, v in item.items()}
+
+        # Introspección para objetos
+        res = {}
+        # Usar __dict__ como base rápida
+        if hasattr(item, "__dict__"):
+            for k, v in vars(item).items():
+                if not k.startswith("_"):
+                    res[k] = self._extract_raw(v)
+
+        # Complementar con dir()
+        for attr in dir(item):
+            if (
+                attr.startswith("_")
+                or attr in res
+                or callable(getattr(item, attr, None))
+            ):
+                continue
+            try:
+                val = getattr(item, attr)
+                res[attr] = self._extract_raw(val)
+            except Exception:
+                continue
+
+        return res if res else str(item)
 
     def _pretty_print_object(self, obj, label, indent=2):
         prefix = "  " * indent
         print(f"\n{prefix}[{label}]")
 
-        # --- LÓGICA DE DESENVOLVIMIENTO (UNWRAPPING) ---
-        # Si es un Log, queremos ver lo que hay dentro de 'log_record'
-        if hasattr(obj, "log_record"):
-            lr = obj.log_record
-            data_to_print = {
-                "body": lr.body,
-                "severity": lr.severity_text,
-                "attributes": dict(lr.attributes) if lr.attributes else {},
-                "trace_id": hex(lr.trace_id) if hasattr(lr, "trace_id") else None,
-                "span_id": hex(lr.span_id) if hasattr(lr, "span_id") else None,
-                "resource": dict(obj.resource.attributes)
-                if hasattr(obj, "resource")
-                else {},
-            }
-        # Si es un Span (Traza), queremos ver su contexto y atributos
-        elif hasattr(obj, "context") and hasattr(obj, "kind"):
-            data_to_print = {
-                "name": obj.name,
-                "context": {
-                    "trace_id": hex(obj.context.trace_id),
-                    "span_id": hex(obj.context.span_id),
-                },
-                "kind": str(obj.kind),
-                "attributes": dict(obj.attributes) if obj.attributes else {},
-                "start_time": obj.start_time,
-                "end_time": obj.end_time,
-            }
-        else:
-            # Fallback para métricas u otros objetos (introspección genérica)
-            data_to_print = vars(obj) if hasattr(obj, "__dict__") else {}
-            if not data_to_print:
-                data_to_print = {
-                    a: getattr(obj, a)
-                    for a in dir(obj)
-                    if not a.startswith("_") and not callable(getattr(obj, a, None))
-                }
+        import json
 
-        formatted = pprint.pformat(data_to_print, indent=2, width=80)
+        data_to_print = self._extract_raw(obj)
+        try:
+            formatted = json.dumps(data_to_print, indent=4, default=str)
+        except Exception:
+            formatted = pprint.pformat(data_to_print, indent=4, width=120)
+
         for line in formatted.splitlines():
             print(f"{prefix}  {line}")
 
@@ -91,22 +113,16 @@ class InterceptorExporter:
             f"  - Clase del Objeto: {type(result).__module__}.{type(result).__name__}"
         )
 
-        # Intentamos sacar el diccionario interno o sus atributos via dir()
-        raw_res = {}
-        if hasattr(result, "__dict__"):
-            raw_res = vars(result)
-        else:
-            for attr in dir(result):
-                if not attr.startswith("__") and not callable(
-                    getattr(result, attr, None)
-                ):
-                    try:
-                        raw_res[attr] = getattr(result, attr)
-                    except:
-                        pass
-
+        raw_res = self._extract_raw(result)
         print("  - Contenido Interno (Raw):")
-        pprint.pprint(raw_res, indent=4)
+        import json
+
+        try:
+            formatted_res = json.dumps(raw_res, indent=4, default=str)
+            for line in formatted_res.splitlines():
+                print(f"    {line}")
+        except Exception:
+            pprint.pprint(raw_res, indent=4, width=120)
         print("#" * 80 + "\n")
 
         return result
@@ -119,43 +135,55 @@ class InterceptorExporter:
 print("\n--- Vinculando Interceptores OTLP (Deep Binding) ---")
 
 
+"""
+Función que busca los exportadores OTLP (OpenTelemetry Protocol) y les agrega el interceptor (InterceptorExporter)
+Input: 
+- processor: Procesador de señales (logs, traces, metrics)
+- signal_type: Tipo de señal (logs, traces, metrics)
+"""
+
+
 def deep_bind(processor, signal_type):
     print(f"  [Debug] Analizando procesador: {type(processor).__name__}")
 
-    # Lista de todos los atributos que podrian contener el exporter
+    # Itera sobre los atributos del procesador
     for attr in dir(processor):
         try:
             val = getattr(processor, attr)
-            # Si el valor tiene 'OTLP' en su representacion y tiene metodo 'export'
+            # Si el valor tiene 'OTLP' en su representacion, tiene metodo 'export' y no es un interceptor
             if (
                 val
                 and "OTLP" in str(val)
                 and hasattr(val, "export")
                 and not isinstance(val, InterceptorExporter)
             ):
+                # Reemplazo el exporter original con el interceptor
                 setattr(processor, attr, InterceptorExporter(val, signal_type))
                 print(
-                    f"    [OK] {signal_type} -> Encontrado en {type(processor).__name__}.{attr}"
+                    f"[OK] {signal_type} -> Encontrado en {type(processor).__name__}.{attr}"
                 )
                 return True
         except (AttributeError, TypeError, Exception):
             continue
 
-    # Si no lo encontramos, buscamos un nivel mas adentro (ej. _batch_processor)
+    # Si no se encuentra, se busca en el atributo _batch_processor
     if hasattr(processor, "_batch_processor"):
         helper = processor._batch_processor
         print(
-            f"    [Debug] Buscando dentro de _batch_processor de {type(processor).__name__}"
+            f"[Debug] Buscando dentro de _batch_processor de {type(processor).__name__}"
         )
+        # Itera sobre los atributos del helper
         for attr in dir(helper):
             try:
                 val = getattr(helper, attr)
+                # Si el valor tiene 'OTLP' en su representacion, tiene metodo 'export' y no es un interceptor
                 if (
                     val
                     and "OTLP" in str(val)
                     and hasattr(val, "export")
                     and not isinstance(val, InterceptorExporter)
                 ):
+                    # Reemplazo el exporter original con el interceptor
                     setattr(helper, attr, InterceptorExporter(val, signal_type))
                     print(
                         f"    [OK] {signal_type} -> Encontrado en {type(processor).__name__}._batch_processor.{attr}"
@@ -198,29 +226,72 @@ metrics.init_metrics()
 app = FastAPI(title="Demo Observabilidad Raw")
 
 
-class Compra(BaseModel):
-    producto: str
-    precio: float
-    usuario: str
+class Usuario(BaseModel):
+    nombre: str
+    apellido: str
+    email: str
+    fecha_nacimiento: str
+    cedula: str
+    nacionalidad: str
+    estado_civil: str
 
 
-@app.post("/comprar")
-@instrument(operation_name="venta_raw")
-def realizar_compra(compra: Compra):
-    logger.info(
-        {"msg": "Ejecutando venta", "usuario": compra.usuario, "monto": compra.precio}
-    )
+def _print_curl_command(url: str, body: dict):
+    """Imprime el comando curl equivalente para esta solicitud."""
+    import json
 
-    time.sleep(0.05)
+    print("\n" + "~" * 80)
+    print("### [CURL COMMAND] PARA REPRODUCIR ESTA PETICIÓN:")
+    print("~" * 80)
 
-    if metrics.transacciones_usuario_counter:
-        metrics.transacciones_usuario_counter.add(1, {"debug": "raw"})
+    cmd = f"curl -X POST '{url}' \\\n"
+    cmd += "  -H 'Content-Type: application/json' \\\n"
+    cmd += f"  -d '{json.dumps(body)}'"
+
+    print(cmd)
+    print("~" * 80 + "\n")
+
+
+@app.post("/crear_usuario")
+@instrument(operation_name="crear_usuario_op")
+def crear_usuario(usuario: Usuario):
+    # 0. Agregar atributos al span actual de la traza
+    current_span = trace.get_current_span()
+    if current_span.is_recording():
+        current_span.set_attribute("usuario.nombre", usuario.nombre)
+        current_span.set_attribute("usuario.apellido", usuario.apellido)
+        current_span.set_attribute("usuario.email", usuario.email)
+        current_span.set_attribute("usuario.cedula", usuario.cedula)
+        current_span.set_attribute("usuario.nacionalidad", usuario.nacionalidad)
+        current_span.set_attribute("usuario.fecha_nacimiento", usuario.fecha_nacimiento)
+        current_span.set_attribute("usuario.estado_civil", usuario.estado_civil)
+
+    # 1. Imprimir Curl
+    _print_curl_command("http://localhost:8000/crear_usuario", usuario.model_dump())
+
+    # 2. Logica de Negocio (Simulada)
+    msg = f"Usuario {usuario.nombre} {usuario.apellido} agregado"
+
+    # 3. Telemetria
+    # LOG
+    log_payload = usuario.model_dump()
+    log_payload["evento"] = "creacion_usuario"
+    log_payload["mensaje"] = msg
+
+    logger.info(log_payload)
+
+    # METRICA
+    if metrics.usuarios_creados_counter:
+        metrics.usuarios_creados_counter.add(
+            1, {"origen": "api_demo", "nacionalidad": usuario.nacionalidad}
+        )
 
     print("\n[PYTHON] Solicitando envio inmediato de telemetria al Collector...")
+    # Forzamos flush para ver los logs OTLP inmediatamente en consola
     logger_provider.force_flush()
     trace_provider.force_flush()
 
-    return {"status": "ok", "ver": "Mira los bloques RAW en la consola abajo"}
+    return {"status": "ok", "mensaje": msg}
 
 
 if __name__ == "__main__":

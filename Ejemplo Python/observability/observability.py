@@ -154,7 +154,7 @@ else:
         insecure=True if ssl_credentials is None else False,
     )
 
-ENABLE_CONSOLE_LOGS = os.getenv("ENABLE_CONSOLE_LOGS", "true").lower() == "true"
+ENABLE_CONSOLE_LOGS = os.getenv("ENABLE_CONSOLE_LOGS", "false").lower() == "true"
 
 logger_provider.add_log_record_processor(BatchLogRecordProcessor(log_exporter))
 
